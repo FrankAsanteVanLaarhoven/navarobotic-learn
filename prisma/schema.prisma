@@ -1,0 +1,386 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User & Authentication
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatar        String?
+  bio           String?
+  role          String    @default("student") // student, instructor, admin
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  profile       Profile?
+  enrollments   Enrollment[]
+  progress      LessonProgress[]
+  submissions   CodeSubmission[]
+  achievements  UserAchievement[]
+  sessions      RobotSession[]
+  forumPosts    ForumPost[]
+  comments      Comment[]
+  certificates  Certificate[]
+  voicePreferences VoicePreference[]
+  generatedVideos GeneratedVideo[]
+}
+
+model Profile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Learning Preferences
+  experienceLevel String    @default("beginner") // beginner, intermediate, advanced
+  preferredLanguage String  @default("python") // python, cpp, rust
+  learningGoals   String?
+
+  // Statistics
+  totalHours      Float     @default(0)
+  coursesCompleted Int       @default(0)
+  lessonsCompleted Int       @default(0)
+
+  // Settings
+  theme           String    @default("dark")
+  language        String    @default("en")
+  notificationsEnabled Boolean @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// AI Video Generation Models
+model VideoGenerationModel {
+  id              String   @id @default(cuid())
+  name            String   @unique // Sora, Kling AI, Veo, Runway, Pika, Luma, Synthara
+  provider        String   @default("openai") // openai, kling, veo, runway, luma, pika
+  description     String?
+  capabilities    String   @default("text-to-video") // text-to-video, image-to-video
+  maxDuration    Int?    // Maximum video duration in seconds
+  resolution     String?  @default("1080p") // 720p, 1080p, 4K
+  pricing        Json?    // Pricing information
+  isActive       Boolean  @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  generatedVideos GeneratedVideo[]
+}
+
+// AI Voice Profiles (like ElevenLabs)
+model VoiceProfile {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  displayName     String   // Display name for UI
+  gender          String?  // male, female, neutral
+  accent          String?  // american, british, australian, etc.
+  age             String?  // young, middle-aged, elderly
+  style           String?  // professional, casual, excited, calm
+  language        String?  // en, es, fr, de, etc.
+  sampleAudioUrl  String?   // Sample audio for preview
+  provider        String   @default("elevenlabs") // elevenlabs, openai, azure, google
+  isActive        Boolean   @default(true)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  userPreferences VoicePreference[]
+  generatedVideos GeneratedVideo[]
+}
+
+// User Voice Preferences
+model VoicePreference {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voiceId     String
+  voice       VoiceProfile @relation(fields: [voiceId], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, voiceId])
+}
+
+// Generated AI Videos for Courses
+model GeneratedVideo {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  videoUrl      String    // URL to generated video
+  thumbnailUrl  String?   // URL to video thumbnail
+  duration      Int?      // Video duration in seconds
+  resolution    String?    // 720p, 1080p, 4K
+  fileSize      Int?       // File size in bytes
+
+  // Generation Details
+  modelId       String    // VideoGenerationModel used
+  model         VideoGenerationModel @relation(fields: [modelId], references: [id])
+
+  prompt        String    // Prompt used for generation
+  voiceId       String?   // Voice profile used for narration
+  voice         VoiceProfile? @relation(fields: [voiceId], references: [id], onDelete: Cascade)
+
+  // Course Integration
+  lessonId      String?
+  lesson        Lesson?   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Generation Status
+  status        String    @default("queued") // queued, processing, completed, failed
+  progress      Float     @default(0) // 0-100
+  errorMessage   String?
+
+  // User Association
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Courses & Learning Paths
+model LearningPath {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  level       String    // beginner, intermediate, advanced
+  duration    String    // e.g., "3 Months", "6 Months"
+  order       Int
+  thumbnail   String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  courses     Course[]
+}
+
+model Course {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  description     String
+  level           String    // beginner, intermediate, advanced
+  duration        String    // e.g., "3 Days", "4 Weeks", "6 Weeks"
+  thumbnail       String?
+  videoPreview    String?
+
+  // Statistics
+  totalStudents   Int       @default(0)
+  rating          Float     @default(0)
+
+  learningPathId  String?
+  learningPath    LearningPath? @relation(fields: [learningPathId], references: [id])
+  order           Int?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  modules         Module[]
+  enrollments     Enrollment[]
+}
+
+model Module {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  order       Int
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id          String    @id @default(cuid())
+  title       String
+  content     String    // Markdown or rich text
+  videoUrl    String?
+  videoDuration Int?
+  order       Int
+  moduleId    String
+  module      Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  // Code & Simulation
+  codeTemplate String?   // Starting code for students
+  language    String?   // python, cpp, rust
+  simulationConfig Json? // Simulation parameters
+
+  // AI Video Generation
+  aiGenerated Boolean   @default(false) // Whether video is AI-generated
+  videoPrompt String?   // Prompt used to generate video
+  voiceSettings Json?   // Voice settings for AI narration
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  progress      LessonProgress[]
+  submissions   CodeSubmission[]
+  generatedVideos GeneratedVideo[]
+}
+
+// Enrollment & Progress
+model Enrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  enrolledAt  DateTime  @default(now())
+  completedAt DateTime?
+  progress    Float     @default(0) // 0-100
+
+  @@unique([userId, courseId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  timeSpent   Int       @default(0) // seconds
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, lessonId])
+}
+
+// Code Submissions
+model CodeSubmission {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  code        String
+  language    String
+  status      String    @default("submitted") // submitted, passed, failed
+
+  // Results
+  testResults Json?
+  score       Float?
+  feedback    String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+// Achievements & Gamification
+model Achievement {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  icon        String?
+  badgeType   String    @default("bronze") // bronze, silver, gold, platinum
+  criteria    Json      // Rules to unlock
+  points      Int        @default(0)
+
+  createdAt   DateTime  @default(now())
+
+  // Relations
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
+
+// Robot Simulation Sessions
+model RobotSession {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  robotType   String    // unitree-g1, poppy, etc.
+  mode        String    // simulation, real-robot, digital-twin
+
+  // Session Data
+  state       Json?     // Current robot state
+  commands    Json?     // Commands sent
+  telemetry   Json?     // Sensor data
+
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  duration    Int?      // seconds
+
+  createdAt   DateTime  @default(now())
+}
+
+// Certificates
+model Certificate {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId          String
+
+  certificateNumber String   @unique
+  issuedAt          DateTime  @default(now())
+  credentialUrl    String?
+
+  createdAt         DateTime  @default(now())
+}
+
+// Community Features
+model ForumPost {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title       String
+  content     String
+  category    String    // general, help, projects, etc.
+
+  views       Int        @default(0)
+  likes       Int        @default(0)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  comments    Comment[]
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId      String
+  post        ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  content     String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}

@@ -1,0 +1,38 @@
+  @@unique([userId, voiceId])
+}
+
+// Generated AI Videos for Courses
+model GeneratedVideo {
+  id            String    @id @default(cuid())
+  title         String
+  description   String?
+  videoUrl      String    // URL to generated video
+  thumbnailUrl  String?   // URL to video thumbnail
+  duration      Int?       // Video duration in seconds
+  resolution    String?    // 720p, 1080p, 4K
+  fileSize      Int?       // File size in bytes
+
+  // Generation Details
+  modelId       String    // VideoGenerationModel used
+  model         VideoGenerationModel @relation(fields: [modelId], references: [id])
+
+  prompt        String    // Prompt used for generation
+  voiceId       String?   // Voice profile used for narration
+  voice         VoiceProfile? @relation(fields: [voiceId], references: [id])
+
+  // Course Integration
+  lessonId      String?
+  lesson        Lesson?   @relation(fields: [lessonId], references: [id])
+
+  // Generation Status
+  status        String    @default("queued") // queued, processing, completed, failed
+  progress      Float     @default(0) // 0-100
+  errorMessage   String?
+
+  // User Association
+  userId        String?
+  user          User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
