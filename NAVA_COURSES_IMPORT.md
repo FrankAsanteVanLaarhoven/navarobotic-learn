@@ -1,8 +1,8 @@
-# 🎓 The Construct Course Import - Enterprise Edition
+# 🎓 NAVA-ROBOTICLEARN Course System - Enterprise Edition
 
 ## Overview
 
-Complete import of all courses from [The Construct](https://app.theconstruct.ai/courses) as enterprise-level, production-ready courses enhanced with NeoVerse, AvatarForcing, and VEO3.
+Complete enterprise-level, production-ready robotics course system enhanced with NeoVerse, AvatarForcing, and VEO3. All courses are original NAVA-ROBOTICLEARN content.
 
 ## 📊 Course Statistics
 
@@ -159,7 +159,7 @@ Each course includes:
 ### Create All Courses
 
 ```bash
-bun run create:theconstruct-courses
+bun run create:all-courses
 ```
 
 This will:
@@ -276,7 +276,7 @@ Our enterprise courses set new benchmarks by:
 
 ## 🔄 Next Steps
 
-1. ✅ Run `bun run create:theconstruct-courses` to create all courses
+1. ✅ Run `bun run create:all-courses` to create all courses
 2. ✅ Run `bun run generate:enhanced-videos` to generate videos
 3. ✅ Review courses in admin panel
 4. ✅ Customize content as needed
@@ -284,11 +284,10 @@ Our enterprise courses set new benchmarks by:
 
 ## 📚 References
 
-- **The Construct**: https://app.theconstruct.ai/courses
 - **NeoVerse**: https://github.com/IamCreateAI/NeoVerse
 - **AvatarForcing**: https://github.com/TaekyungKi/AvatarForcing
 - **VEO3**: Google AI Video Generation
 
 ---
 
-**Enterprise-Level Robotics Education - Complete The Construct Import 🚀**
+**Enterprise-Level Robotics Education - NAVA-ROBOTICLEARN Course System 🚀**

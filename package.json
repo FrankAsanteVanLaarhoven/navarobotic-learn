@@ -19,7 +19,7 @@
     "monitor:videos": "bun scripts/monitor-video-generation.ts",
     "check:videos": "bun scripts/check-course-videos.ts",
     "create:enterprise-courses": "bun scripts/create-enterprise-courses.ts",
-    "create:all-courses": "bun scripts/create-theconstruct-courses.ts",
+    "create:all-courses": "bun scripts/create-nava-courses.ts",
     "generate:python-videos": "bun scripts/generate-python-robotics-videos.ts"
   },
   "prisma": {

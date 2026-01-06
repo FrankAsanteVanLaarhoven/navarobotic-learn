@@ -112,7 +112,7 @@ export class GLM47Service {
     robotType?: string
   }): Promise<string> {
     const systemPrompt = `You are an expert in creating world-class educational video prompts for robotics courses. 
-Your prompts should be comprehensive, detailed, and designed to create videos that are better than Coursera, Udemy, Teachable, and The Construct.
+Your prompts should be comprehensive, detailed, and designed to create videos that are better than Coursera, Udemy, Teachable, and other leading educational platforms.
 
 Include:
 - Step-by-step walkthroughs

@@ -105,7 +105,7 @@ bun run generate:enhanced-videos
 - ✅ World-class video quality
 - ✅ AI-enhanced prompts
 - ✅ Production-ready system
-- ✅ Better than Coursera, Udemy, Teachable, The Construct
+- ✅ Better than Coursera, Udemy, Teachable, and other leading platforms
 
 ## 🔧 Configuration
 

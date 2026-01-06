@@ -4,7 +4,7 @@
 
 A state-of-the-art, enterprise-level robotics learning platform that sets new benchmarks in online education, featuring:
 
-- **100+ Courses** from The Construct curriculum
+- **100+ Courses** - Comprehensive robotics curriculum
 - **NeoVerse 4D World Modeling** for realistic simulations
 - **AvatarForcing** interactive instructor avatars
 - **VEO3** cinematic video generation
@@ -55,7 +55,7 @@ A state-of-the-art, enterprise-level robotics learning platform that sets new be
 bun run create:all-courses
 ```
 
-Creates all 100+ courses from The Construct with:
+Creates all 100+ enterprise-level courses with:
 - Learning paths
 - Modules and lessons
 - AI video generation configuration
@@ -111,7 +111,7 @@ Tests all components without API calls.
 
 ```bash
 # Course Creation
-bun run create:all-courses          # Create all The Construct courses
+bun run create:all-courses          # Create all NAVA-ROBOTICLEARN courses
 bun run create:enterprise-courses    # Create enterprise course set
 
 # Video Generation
@@ -133,7 +133,7 @@ bun run db:seed                      # Seed database
 - **ENHANCED_VIDEO_GENERATION.md** - Video generation guide
 - **TEMPLATE_CUSTOMIZATION_GUIDE.md** - Customize robot templates
 - **TESTING_GUIDE.md** - Testing procedures
-- **THECONSTRUCT_IMPORT.md** - Course import details
+- **NAVA_COURSES_IMPORT.md** - Course import details
 - **ENTERPRISE_COURSES.md** - Enterprise course system
 - **QUICK_START.md** - Quick start guide
 - **INTEGRATION_SUMMARY.md** - Integration overview

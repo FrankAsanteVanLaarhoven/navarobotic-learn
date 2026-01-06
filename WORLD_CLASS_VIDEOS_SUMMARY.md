@@ -79,7 +79,7 @@ Each lesson has a detailed, production-ready prompt that includes:
 
 ## 🏆 What Makes These Videos World-Class
 
-### Better Than Coursera, Udemy, Teachable, The Construct:
+### Better Than Coursera, Udemy, Teachable, and Other Leading Platforms:
 
 1. **Interactive Instructor Avatars**
    - Real-time reactions (~500ms latency)
@@ -135,7 +135,7 @@ Once configured and run, you'll have:
 - ✅ Step-by-step walkthroughs
 - ✅ Interactive coding workshops
 - ✅ Professional quality (1080p/4K)
-- ✅ Better than Coursera, Udemy, Teachable, The Construct!
+- ✅ Better than Coursera, Udemy, Teachable, and other leading platforms!
 
 ## 📊 Video Specifications
 

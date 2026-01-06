@@ -98,7 +98,7 @@ Each video includes:
 
 ## 📊 What Makes These Videos World-Class
 
-### Better Than Coursera/Udemy/Teachable/The Construct:
+### Better Than Coursera/Udemy/Teachable and Other Leading Platforms:
 
 1. **Interactive Instructor Avatars**
    - Real-time reactions (~500ms latency)

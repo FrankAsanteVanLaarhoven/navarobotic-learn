@@ -21,12 +21,12 @@ import type { VideoGenerationConfig } from '../src/lib/video-generation/enhanced
 const prisma = new PrismaClient()
 
 // Comprehensive, world-class video prompts for each lesson
-// Designed to be better than Coursera, Udemy, Teachable, and The Construct
+// Designed to be better than Coursera, Udemy, Teachable, and other leading platforms
 const lessonPrompts: Record<string, string> = {
   // Module 1: Introduction and Fundamentals
   'lesson-1-1': `World-class educational video: Python 3 for Robotics - Introduction to Python Programming
 
-VIDEO STYLE: Professional instructor-led course with interactive workspace demonstration, similar to The Construct's integrated learning environment.
+VIDEO STYLE: Professional instructor-led course with interactive workspace demonstration, featuring NAVA-ROBOTICLEARN's integrated learning environment.
 
 CONTENT STRUCTURE:
 1. INTRODUCTION (0-2min)
