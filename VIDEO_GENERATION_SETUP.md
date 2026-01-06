@@ -34,22 +34,17 @@ All 9 lessons have detailed, world-class prompts:
 
 ## 🔧 Setup Required
 
-### 1. ZAI SDK Configuration
+### 1. Gemini API Configuration
 
-The script needs ZAI API credentials. Create a `.z-ai-config` file in your project root:
+The script needs Gemini API credentials. Add to your `.env` file:
 
-```json
-{
-  "apiKey": "your-zai-api-key-here",
-  "baseUrl": "https://api.z.ai",
-  "model": "veo"
-}
-```
-
-Or set environment variables:
 ```bash
-export ZAI_API_KEY="your-api-key"
+GEMINI_API_KEY="your-gemini-api-key-here"
+# Or
+GOOGLE_AI_API_KEY="your-google-ai-api-key-here"
 ```
+
+Get your API key from [Google AI Studio](https://aistudio.google.com/)
 
 ### 2. Generate Videos
 
@@ -132,7 +127,7 @@ Each video includes:
 
 ## 🚀 Next Steps
 
-1. **Configure ZAI API** - Add your API key
+1. **Configure Gemini API** - Add your API key to `.env`
 2. **Run Generation** - `bun run generate:python-videos`
 3. **Monitor Progress** - Videos generate in 1-10 minutes
 4. **Review Videos** - Check quality and content

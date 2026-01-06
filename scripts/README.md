@@ -6,7 +6,7 @@ Generate AI-powered educational videos for all lessons in the Unitree G1 Fundame
 
 ### Prerequisites
 
-1. **ZAI API Key**: Set up your ZAI credentials (supports Veo 3 via Gemini 2.5)
+1. **Gemini API Key**: Set up your Gemini API credentials (supports Veo 3.1 with sound effects)
 2. **Environment Variables**: Ensure your `.env` file has the necessary API keys
 
 ### Usage

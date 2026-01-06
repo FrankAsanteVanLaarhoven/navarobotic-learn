@@ -17,7 +17,7 @@ bun run generate:videos
 This script will:
 - ✅ Fetch all 12 lessons from the Unitree G1 Fundamentals course
 - ✅ Generate optimized prompts for each lesson
-- ✅ Create video generation tasks using ZAI SDK
+- ✅ Create video generation tasks using Gemini API (Veo 3.1)
 - ✅ Poll for completion and update the database automatically
 - ✅ Provide a detailed summary of results
 
@@ -157,7 +157,7 @@ After running the script, you should see:
 ## 📞 Support
 
 If videos fail to generate:
-1. Check ZAI API credentials
+1. Check Gemini API credentials
 2. Verify internet connection
 3. Check API rate limits
 4. Review error messages in console

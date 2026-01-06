@@ -159,7 +159,7 @@ async function testSystem() {
   console.log('✅ All Tests Completed Successfully!')
   console.log('='.repeat(60))
   console.log('\n📚 Next Steps:')
-  console.log('   1. Set up ZAI API credentials in .env file')
+  console.log('   1. Set up Gemini API credentials in .env file')
   console.log('   2. Run: bun run generate:enhanced-videos')
   console.log('   3. Test API endpoints: POST /api/videos/generate-enhanced')
   console.log('   4. Enable NeoVerse toggle in simulation page')

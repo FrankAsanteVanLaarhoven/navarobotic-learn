@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
-import ZAI from 'z-ai-web-dev-sdk'
+import { geminiVideoService } from '../src/lib/video-generation/gemini-video-service'
+import type { VideoGenerationConfig } from '../src/lib/video-generation/enhanced-video-service'
 
 const prisma = new PrismaClient()
 
@@ -25,77 +26,67 @@ async function generateVideoForLesson(lessonId: string, prompt: string, lessonTi
     console.log(`\n🎬 Generating video for: ${lessonTitle}`)
     console.log(`📝 Prompt: ${prompt.substring(0, 100)}...`)
 
-    // Use ZAI SDK which supports Veo 3 (Gemini 2.5 integration)
-    // The SDK automatically uses the best available model including Veo 3
-    const zai = await ZAI.create()
-
-    // Enhanced prompt optimized for Gemini 2.5 / Veo 3 generation
-    // Veo 3 excels at: realistic movements, technical demonstrations, educational content
+    // Enhanced prompt optimized for Veo 3.1 generation
     const enhancedPrompt = `${prompt} High quality educational video, professional cinematography, clear technical demonstrations, realistic robot movements, suitable for online learning platform. Cinematic lighting, smooth camera movements, detailed technical annotations.`
 
-    // Create video generation task with Veo 3 optimized settings
-    // Veo 3 via Gemini 2.5 supports: 1080p, synchronized audio, 8-second clips
-    const task = await zai.video.generations.create({
-      prompt: enhancedPrompt,
-      quality: 'high', // Use high quality for educational content (Veo 3 default)
-      with_audio: false, // Set to true for synchronized audio (Veo 3 feature)
-      size: '1920x1080', // Full HD (Veo 3 native resolution)
-      fps: 30,
-      duration: 30, // Will be chunked into 8-second segments by Veo 3
-      // model: 'veo' // Automatically uses best available including Veo 3
-    })
+    // Use Gemini video service with Veo 3.1
+    const config: VideoGenerationConfig = {
+      lessonId: lessonId,
+      robotType: 'generic',
+      useNeoVerse: true,
+      useAvatarForcing: true,
+      useVEO3: true,
+      quality: 'high',
+      duration: 30,
+      resolution: '1080p'
+    }
 
-    console.log(`✅ Task created! Task ID: ${task.id}`)
-    console.log(`📊 Status: ${task.task_status}`)
-    console.log(`🤖 Model: ${task.model || 'Veo 3 (via Gemini)'}`)
+    const result = await geminiVideoService.generateVideo(enhancedPrompt, config)
+
+    if (!result.success || !result.taskId || !result.videoId) {
+      console.log(`❌ Video generation failed: ${result.error}`)
+      return null
+    }
+
+    console.log(`✅ Task created! Task ID: ${result.taskId}`)
+    console.log(`🤖 Model: Veo 3.1 (via Gemini API)`)
 
     // Poll for result
-    let result = await zai.async.result.query(task.id)
     let pollCount = 0
     const maxPolls = 60 // Poll for up to 10 minutes (60 * 10 seconds)
     const pollInterval = 10000 // 10 seconds
 
-    while (result.task_status === 'PROCESSING' && pollCount < maxPolls) {
+    while (pollCount < maxPolls) {
       pollCount++
-      const progress = Math.min(100, (pollCount / maxPolls) * 100)
-      console.log(`⏳ Poll ${pollCount}/${maxPolls}: Still processing... (${Math.round(progress)}% estimated)`)
-      await new Promise(resolve => setTimeout(resolve, pollInterval))
-      result = await zai.async.result.query(task.id)
-    }
-
-    if (result.task_status === 'SUCCESS') {
-      const videoUrl = 
-        result.video_result?.[0]?.url || 
-        result.video_url || 
-        result.url || 
-        result.video
-
-      if (videoUrl) {
+      const statusResult = await geminiVideoService.pollVideoStatus(result.taskId, result.videoId)
+      
+      if (statusResult.success && statusResult.videoUrl) {
         console.log(`🎉 Video generated successfully!`)
-        console.log(`🔗 URL: ${videoUrl}`)
+        console.log(`🔗 URL: ${statusResult.videoUrl}`)
 
         // Update lesson in database
         await prisma.lesson.update({
           where: { id: lessonId },
-          data: { videoUrl: videoUrl }
+          data: { videoUrl: statusResult.videoUrl }
         })
 
         console.log(`💾 Database updated with video URL`)
-        return videoUrl
-      } else {
-        console.log(`⚠️ Task completed but video URL not found`)
-        console.log(`Response:`, JSON.stringify(result, null, 2))
+        return statusResult.videoUrl
+      }
+
+      if (statusResult.error && !statusResult.error.includes('still processing')) {
+        console.log(`❌ Video generation failed: ${statusResult.error}`)
         return null
       }
-    } else if (result.task_status === 'FAIL') {
-      console.log(`❌ Video generation failed`)
-      console.log(`Response:`, JSON.stringify(result, null, 2))
-      return null
-    } else {
-      console.log(`⏸️ Task still processing. Task ID: ${task.id}`)
-      console.log(`💡 You can query this task later`)
-      return null
+
+      const progress = Math.min(100, (pollCount / maxPolls) * 100)
+      console.log(`⏳ Poll ${pollCount}/${maxPolls}: Still processing... (${Math.round(progress)}% estimated)`)
+      await new Promise(resolve => setTimeout(resolve, pollInterval))
     }
+
+    console.log(`⏸️ Task still processing. Task ID: ${result.taskId}`)
+    console.log(`💡 You can query this task later`)
+    return null
   } catch (error: any) {
     console.error(`❌ Error generating video for ${lessonTitle}:`, error?.message || error)
     return null

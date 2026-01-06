@@ -149,7 +149,7 @@ const enhancedPrompt = await glm47Service.enhanceVideoPrompt(
 - **Cost**: Pay-per-use, check pricing
 
 ### GLM-4.7 API
-- **Model**: `zai-org/glm-4.7`
+- **Model**: `glm-4.7` (via Novita AI)
 - **Endpoint**: `https://api.novita.ai/openai/v1/chat/completions`
 - **Rate Limits**: Check Novita/Glama documentation
 - **Cost**: Pay-per-token, check pricing

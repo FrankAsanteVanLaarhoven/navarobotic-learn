@@ -173,7 +173,7 @@ import NeoVerseSimulation from '@/components/simulation/NeoVerseSimulation'
    - VEO3 quality settings
 
 2. **Video Generation**
-   - Task creation via ZAI SDK
+   - Task creation via Gemini API (Veo 3.1)
    - VEO3 model selection
    - Quality and resolution settings
 
@@ -284,7 +284,7 @@ const config = {
 
 ### Video Generation Fails
 
-1. Check ZAI API credentials
+1. Check Gemini API credentials
 2. Verify internet connection
 3. Check API rate limits
 4. Review error messages in console

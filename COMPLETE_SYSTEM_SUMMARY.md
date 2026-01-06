@@ -105,7 +105,7 @@ Tests all components without API calls.
 - **Next.js**: React framework
 - **Prisma**: Database ORM
 - **TypeScript**: Type safety
-- **ZAI SDK**: Video generation API
+- **Gemini API**: Video generation via Veo 3.1
 
 ## 🔧 Available Commands
 

@@ -1,6 +1,6 @@
-# 🚀 Welcome to Z.ai Code Scaffold
+# 🚀 NAVA-ROBOTICLEARN Platform
 
-A modern, production-ready web application scaffold powered by cutting-edge technologies, designed to accelerate your development with [Z.ai](https://chat.z.ai)'s AI-powered coding assistance.
+A modern, production-ready robotics learning platform powered by cutting-edge AI technologies for world-class educational content generation.
 
 ## ✨ Technology Stack
 
@@ -72,17 +72,18 @@ bun start
 
 Open [http://localhost:3000](http://localhost:3000) to see your application running.
 
-## 🤖 Powered by Z.ai
+## 🤖 Powered by Advanced AI
 
-This scaffold is optimized for use with [Z.ai](https://chat.z.ai) - your AI assistant for:
+NAVA-ROBOTICLEARN uses cutting-edge AI technologies:
 
-- **💻 Code Generation** - Generate components, pages, and features instantly
-- **🎨 UI Development** - Create beautiful interfaces with AI assistance  
-- **🔧 Bug Fixing** - Identify and resolve issues with intelligent suggestions
-- **📝 Documentation** - Auto-generate comprehensive documentation
-- **🚀 Optimization** - Performance improvements and best practices
+- **🎬 Video Generation** - Veo 3.1 with sound effects via Gemini API
+- **📝 Content Enhancement** - Gemini 3 Flash for intelligent text generation
+- **🎤 Voice Synthesis** - Gemini TTS for natural instructor narration
+- **🖼️ Image Generation** - Nano Banana Pro for course thumbnails
+- **🌍 World Modeling** - NeoVerse 4D for realistic simulations
+- **👤 Interactive Avatars** - AvatarForcing for engaging instructors
 
-Ready to build something amazing? Start chatting with Z.ai at [chat.z.ai](https://chat.z.ai) and experience the future of AI-powered development!
+Experience the future of AI-powered robotics education!
 
 ## 📁 Project Structure
 
@@ -129,13 +130,14 @@ This scaffold includes a comprehensive set of modern web development tools:
 - **Type Safety**: End-to-end TypeScript with Zod validation
 - **Essential Hooks**: 100+ useful React hooks with ReactUse for common patterns
 
-## 🤝 Get Started with Z.ai
+## 🤝 Get Started
 
-1. **Clone this scaffold** to jumpstart your project
-2. **Visit [chat.z.ai](https://chat.z.ai)** to access your AI coding assistant
-3. **Start building** with intelligent code generation and assistance
-4. **Deploy with confidence** using the production-ready setup
+1. **Clone this repository** to get started
+2. **Add your API keys** to `.env` file (Gemini API key)
+3. **Run the platform** with `bun run dev`
+4. **Generate courses** with `bun run create:all-courses`
+5. **Create videos** with `bun run generate:enhanced-videos`
 
 ---
 
-Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+Built with ❤️ for the robotics education community. Powered by NAVA-ROBOTICLEARN 🚀

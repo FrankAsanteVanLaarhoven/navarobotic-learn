@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { geminiVideoService } from '@/lib/video-generation/gemini-video-service'
 
 export async function GET(
   request: Request,
@@ -16,71 +16,63 @@ export async function GET(
       )
     }
 
-    // Initialize ZAI
-    const zai = await ZAI.create()
+    // Find video by task ID
+    const generatedVideo = await db.generatedVideo.findFirst({
+      where: {
+        // Task ID is stored in metadata or we can search by pattern
+      }
+    })
 
-    // Query task status
-    const result = await zai.async.result.query(taskId)
+    if (!generatedVideo) {
+      return NextResponse.json(
+        { error: 'Video not found' },
+        { status: 404 }
+      )
+    }
+
+    // Poll status using Gemini video service
+    const result = await geminiVideoService.pollVideoStatus(taskId, generatedVideo.id)
 
     const response: any = {
       taskId: taskId,
-      status: result.task_status,
-      progress: result.task_status === 'PROCESSING' ? 50 : result.task_status === 'SUCCESS' ? 100 : 0
+      status: result.success ? 'completed' : 'processing',
+      progress: generatedVideo.progress || 0
     }
 
-    if (result.task_status === 'SUCCESS') {
-      const videoUrl = 
-        result.video_result?.[0]?.url || 
-        result.video_url || 
-        result.url || 
-        result.video
+    if (result.success && result.videoUrl) {
+      response.videoUrl = result.videoUrl
+      response.status = 'completed'
+      response.progress = 100
 
-      if (videoUrl) {
-        response.videoUrl = videoUrl
-
-        // Update GeneratedVideo record if it exists
-        const generatedVideo = await db.generatedVideo.findFirst({
-          where: {
-            // Try to find by matching prompt or lesson
-          }
-        })
-
-        if (generatedVideo) {
-          await db.generatedVideo.update({
-            where: { id: generatedVideo.id },
-            data: {
-              videoUrl: videoUrl,
-              status: 'completed',
-              progress: 100
-            }
-          })
-
-          // Update lesson with video URL
-          if (generatedVideo.lessonId) {
-            await db.lesson.update({
-              where: { id: generatedVideo.lessonId },
-              data: { videoUrl: videoUrl }
-            })
-          }
-        }
-      }
-    } else if (result.task_status === 'FAIL') {
-      response.error = 'Video generation failed'
-      
       // Update GeneratedVideo record
-      const generatedVideo = await db.generatedVideo.findFirst({
-        where: {}
+      await db.generatedVideo.update({
+        where: { id: generatedVideo.id },
+        data: {
+          videoUrl: result.videoUrl,
+          status: 'completed',
+          progress: 100
+        }
       })
 
-      if (generatedVideo) {
-        await db.generatedVideo.update({
-          where: { id: generatedVideo.id },
-          data: {
-            status: 'failed',
-            errorMessage: 'Generation failed'
-          }
+      // Update lesson with video URL
+      if (generatedVideo.lessonId) {
+        await db.lesson.update({
+          where: { id: generatedVideo.lessonId },
+          data: { videoUrl: result.videoUrl }
         })
       }
+    } else if (result.error) {
+      response.error = result.error
+      response.status = 'failed'
+      
+      // Update GeneratedVideo record
+      await db.generatedVideo.update({
+        where: { id: generatedVideo.id },
+        data: {
+          status: 'failed',
+          errorMessage: result.error
+        }
+      })
     }
 
     return NextResponse.json(response)

@@ -36,7 +36,7 @@ export class GLM47Service {
       process.env.NOVITA_BASE_URL || 
       'https://api.novita.ai'
     
-    this.model = config?.model || 'zai-org/glm-4.7'
+    this.model = config?.model || 'glm-4.7'
   }
 
   /**

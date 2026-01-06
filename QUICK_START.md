@@ -55,7 +55,7 @@ curl -X POST http://localhost:3000/api/videos/generate-enhanced \
 ### 5. Generate Videos for All Courses
 
 ```bash
-# Set up ZAI API credentials first
+# Set up Gemini API credentials first
 # Then run:
 bun run generate:enhanced-videos
 ```

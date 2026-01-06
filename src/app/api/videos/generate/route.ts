@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
-import ZAI from 'z-ai-web-dev-sdk'
+import { geminiVideoService } from '@/lib/video-generation/gemini-video-service'
+import type { VideoGenerationConfig } from '@/lib/video-generation/enhanced-video-service'
 
 // Lesson-specific prompts for video generation
 const lessonPrompts: Record<string, string> = {
@@ -53,49 +54,41 @@ export async function POST(request: Request) {
       `Educational video about ${lesson.title}. Professional presentation style, clear explanations, technical content about robotics and the Unitree G1 humanoid robot.`
 
     console.log(`🎬 Generating video for lesson: ${lesson.title}`)
-    console.log(`🤖 Using Gemini 2.5 with Veo 3 model`)
+    console.log(`🤖 Using Gemini API with Veo 3.1 model`)
 
-    // Initialize ZAI (which supports Veo 3 via Gemini)
-    const zai = await ZAI.create()
-
-    // Enhanced prompt optimized for Gemini/Veo 3
+    // Enhanced prompt optimized for Veo 3.1
     const enhancedPrompt = `${prompt} High quality educational video, professional cinematography, clear technical demonstrations, suitable for online learning platform.`
 
-    // Create video generation task with Veo 3 settings
-    const task = await zai.video.generations.create({
-      prompt: enhancedPrompt,
+    // Use Gemini video service
+    const config: VideoGenerationConfig = {
+      lessonId: lessonId,
+      robotType: 'generic',
+      useNeoVerse: true,
+      useAvatarForcing: true,
+      useVEO3: true,
       quality: model === 'high' ? 'high' : 'speed',
-      with_audio: false, // Can be enabled for synchronized audio
-      size: '1920x1080', // Full HD
-      fps: 30,
-      duration: 30, // 30 seconds (Veo 3 supports up to 8 seconds per clip, but can chain)
-      model: 'veo' // Use Veo 3 model
-    })
+      duration: 30,
+      resolution: '1080p'
+    }
 
-    // Create GeneratedVideo record
-    const videoModel = await db.videoGenerationModel.findFirst({
-      where: { name: 'Sora' } // Default to Sora
-    })
+    const result = await geminiVideoService.generateVideo(enhancedPrompt, config)
 
-    const generatedVideo = await db.generatedVideo.create({
-      data: {
-        title: `Video for ${lesson.title}`,
-        description: `AI-generated video for lesson: ${lesson.title}`,
-        videoUrl: '', // Will be updated when ready
-        prompt: prompt,
-        modelId: videoModel?.id || '',
-        lessonId: lessonId,
-        status: 'processing',
-        progress: 0,
-      }
-    })
+    if (!result.success) {
+      return NextResponse.json(
+        { 
+          error: 'Failed to generate video',
+          message: result.error || 'Unknown error'
+        },
+        { status: 500 }
+      )
+    }
 
     // Return task info (client will poll for status)
     return NextResponse.json({
       success: true,
-      taskId: task.id,
-      videoId: generatedVideo.id,
-      status: task.task_status,
+      taskId: result.taskId,
+      videoId: result.videoId,
+      status: 'processing',
       message: 'Video generation started. Poll /api/videos/status/[taskId] for updates.'
     })
 

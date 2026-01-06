@@ -39,7 +39,7 @@ bun run scripts/test-api-endpoints.ts
 ### 3. Generate Videos for Courses
 
 ```bash
-# Make sure you have ZAI API credentials in .env
+# Make sure you have Gemini API credentials in .env
 bun run generate:enhanced-videos
 ```
 
@@ -186,7 +186,7 @@ This will:
 ### Issue: API Returns 500 Error
 
 **Check:**
-1. ZAI API credentials in `.env`
+1. Gemini API credentials in `.env`
 2. Database connection
 3. Lesson ID exists
 4. Server logs for errors
@@ -194,7 +194,7 @@ This will:
 **Solution:**
 ```bash
 # Check .env file
-cat .env | grep ZAI
+cat .env | grep GEMINI
 
 # Check database
 bun run db:push

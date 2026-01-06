@@ -18,7 +18,7 @@ Successfully integrated **Gemini API** and **GLM-4.7** for world-class video gen
    - Improves prompt quality automatically
 
 3. **Enhanced Video Service** (Updated)
-   - Now uses Gemini API instead of ZAI SDK
+   - Uses Gemini API for video generation
    - Integrates GLM-4.7 for prompt enhancement
    - Maintains NeoVerse and AvatarForcing support
 

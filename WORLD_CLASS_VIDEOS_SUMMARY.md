@@ -125,7 +125,7 @@ Each lesson has a detailed, production-ready prompt that includes:
 
 ## 🔧 Setup Required
 
-The script needs ZAI API configuration. See `VIDEO_GENERATION_SETUP.md` for details.
+The script needs Gemini API configuration. See `VIDEO_GENERATION_SETUP.md` for details.
 
 ## 🎉 Result
 
