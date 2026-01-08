@@ -94,7 +94,7 @@ function TrajectoryPath({ points }: { points: THREE.Vector3[] }) {
   return (
     <Line
       points={curvePoints}
-      color="#00d4ff"
+      color="#2E7DFF"
       lineWidth={2}
       transparent={true}
       opacity={0.6}
@@ -158,16 +158,16 @@ function AdvancedRobotModel({
   // Robot colors with enhanced materials
   const robotColors: Record<string, { primary: string; secondary: string; accent: string; metalness: number; roughness: number }> = {
     'unitree-g1': { 
-      primary: '#1a1a2e', 
-      secondary: '#16213e', 
-      accent: '#00d4ff',
+      primary: '#0B0F19', 
+      secondary: '#1a1f2e', 
+      accent: '#2E7DFF',
       metalness: 0.9,
       roughness: 0.1
     },
     'boston-atlas': { 
-      primary: '#2d1b1b', 
-      secondary: '#3d2525', 
-      accent: '#ff6b6b',
+      primary: '#0B0F19', 
+      secondary: '#1a1f2e', 
+      accent: '#00C2A8',
       metalness: 0.85,
       roughness: 0.15
     },
@@ -485,13 +485,17 @@ function AdvancedScene({
   isRunning, 
   speed, 
   cameraMode,
-  jointAngles 
+  jointAngles,
+  showSensors = false,
+  showPathPlanning = false
 }: {
   selectedRobot: string
   isRunning: boolean
   speed: number
   cameraMode: string
   jointAngles: number[]
+  showSensors?: boolean
+  showPathPlanning?: boolean
 }) {
   const { camera } = useThree()
   const [trajectoryPoints, setTrajectoryPoints] = useState<THREE.Vector3[]>([])
@@ -537,8 +541,8 @@ function AdvancedScene({
         shadow-camera-bottom={-10}
         shadow-bias={-0.0001}
       />
-      <pointLight position={[-5, 5, 5]} intensity={0.8} color="#00d4ff" />
-      <pointLight position={[5, 5, -5]} intensity={0.8} color="#ff6b6b" />
+      <pointLight position={[-5, 5, 5]} intensity={0.8} color="#2E7DFF" />
+      <pointLight position={[5, 5, -5]} intensity={0.8} color="#00C2A8" />
       <spotLight
         position={[0, 8, 0]}
         angle={0.5}
@@ -593,7 +597,7 @@ function AdvancedScene({
       />
 
       {/* Sensor Visualizations */}
-      {showSensors && (
+      {showSensors !== false && (
         <>
           <LiDARVisualization 
             position={new THREE.Vector3(0, 1.7, 0)}

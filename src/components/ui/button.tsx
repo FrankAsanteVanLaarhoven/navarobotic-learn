@@ -1,6 +1,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { getSoundManager } from "@/lib/sounds"
 
 import { cn } from "@/lib/utils"
 
@@ -40,19 +41,44 @@ function Button({
   variant,
   size,
   asChild = false,
+  onMouseEnter,
+  onClick,
   ...props
 }: React.ComponentProps<"button"> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean
   }) {
   const Comp = asChild ? Slot : "button"
+  const soundManager = getSoundManager()
+
+  const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (soundManager.isEnabled()) {
+      soundManager.playHover()
+    }
+    onMouseEnter?.(e)
+  }
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (soundManager.isEnabled()) {
+      soundManager.playClick()
+    }
+    onClick?.(e)
+  }
 
   return (
     <Comp
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      data-sound-handled
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        'interactive-glow relative overflow-hidden'
+      )}
+      onMouseEnter={handleMouseEnter}
+      onClick={handleClick}
       {...props}
-    />
+    >
+      {props.children && <span className="relative z-10">{props.children}</span>}
+    </Comp>
   )
 }
 

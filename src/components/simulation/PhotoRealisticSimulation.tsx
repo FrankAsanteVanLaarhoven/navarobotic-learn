@@ -38,12 +38,12 @@ function RobotModel({
     }
   })
 
-  // Robot colors based on selection
+  // Robot colors based on selection - Professional Rovyn brand colors
   const robotColors: Record<string, { primary: string; secondary: string; accent: string }> = {
-    'unitree-g1': { primary: '#1a1a2e', secondary: '#16213e', accent: '#00d4ff' },
-    'boston-atlas': { primary: '#2d1b1b', secondary: '#3d2525', accent: '#ff6b6b' },
-    'tesla-optimus': { primary: '#1a2e1a', secondary: '#253d25', accent: '#a3ffb3' },
-    'agility-digit': { primary: '#2e2a1b', secondary: '#3d3525', accent: '#ffa500' },
+    'unitree-g1': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#2E7DFF' },
+    'boston-atlas': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#00C2A8' },
+    'tesla-optimus': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#FFD166' },
+    'agility-digit': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#2E7DFF' },
   }
 
   const colors = robotColors[selectedRobot] || robotColors['unitree-g1']
@@ -261,8 +261,8 @@ function Scene({
         shadow-camera-top={10}
         shadow-camera-bottom={-10}
       />
-      <pointLight position={[-5, 5, 5]} intensity={0.5} color="#00d4ff" />
-      <pointLight position={[5, 5, -5]} intensity={0.5} color="#ff6b6b" />
+      <pointLight position={[-5, 5, 5]} intensity={0.5} color="#2E7DFF" />
+      <pointLight position={[5, 5, -5]} intensity={0.5} color="#00C2A8" />
 
       {/* Environment - HDRI or studio environment */}
       <Environment preset="studio" />

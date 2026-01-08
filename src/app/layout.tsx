@@ -1,34 +1,48 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from "next-themes";
 import { Suspense } from "react";
 import Loading from "./loading";
+import { SoundProvider } from "@/components/SoundProvider";
+import { VoiceNavigator } from "@/components/VoiceNavigator";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Robotics Training Platform - AI-Powered Learning",
-  description: "Build, program, and simulate advanced humanoid robots with our revolutionary platform. Access real robots, 3D simulations, and AI-powered learning paths.",
-  keywords: ["Robotics", "Humanoid Robots", "Simulation", "AI", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui"],
-  authors: [{ name: "Robotics Platform Team" }],
+  title: "Rovyn — Learn robotics by building",
+  description: "Courses, 3D simulation, and real-robot labs in one platform.",
+  keywords: ["Robotics", "Learn robotics", "ROS", "Simulation", "Robot programming", "3D simulation", "Robotics courses"],
+  authors: [{ name: "Rovyn" }],
   icons: {
-    icon: "https://platform.com/logo.svg",
+    icon: [
+      { url: "/favicon-r.png", sizes: "32x32", type: "image/png" },
+      { url: "/logos/logo-r-icon.svg", sizes: "32x32", type: "image/svg+xml" },
+    ],
   },
   openGraph: {
-    title: "Robotics Training Platform",
-    description: "AI-powered humanoid robotics education platform with real simulations and video generation",
-    url: "https://platform.com",
-    siteName: "Robotics Platform",
+    title: "Rovyn",
+    description: "Learn robotics by building.",
+    url: "https://rovyn.io",
+    siteName: "Rovyn",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rovyn",
+    description: "Learn robotics by building.",
   },
 };
 
@@ -46,12 +60,17 @@ export default function RootLayout({
         <link rel="preconnect" href="https://localhost:3000" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${inter.variable} ${jetbrainsMono.variable} antialiased bg-background text-foreground font-sans`}
       >
-        <Suspense fallback={<Loading />}>
-          {children}
-        </Suspense>
-        <Toaster />
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <SoundProvider>
+            <Suspense fallback={<Loading />}>
+              {children}
+            </Suspense>
+            <VoiceNavigator />
+            <Toaster />
+          </SoundProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

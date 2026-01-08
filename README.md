@@ -1,6 +1,8 @@
-# 🚀 NAVA-ROBOTICLEARN Platform
+# 🚀 Rovyn
 
-A modern, production-ready robotics learning platform powered by cutting-edge AI technologies for world-class educational content generation.
+**Learn robotics by building.**
+
+A modern, production-ready robotics learning platform. Courses, 3D simulation, and real-robot labs in one platform.
 
 ## ✨ Technology Stack
 
@@ -74,7 +76,7 @@ Open [http://localhost:3000](http://localhost:3000) to see your application runn
 
 ## 🤖 Powered by Advanced AI
 
-NAVA-ROBOTICLEARN uses cutting-edge AI technologies:
+Rovyn uses cutting-edge AI technologies:
 
 - **🎬 Video Generation** - Veo 3.1 with sound effects via Gemini API
 - **📝 Content Enhancement** - Gemini 3 Flash for intelligent text generation
@@ -140,4 +142,4 @@ This scaffold includes a comprehensive set of modern web development tools:
 
 ---
 
-Built with ❤️ for the robotics education community. Powered by NAVA-ROBOTICLEARN 🚀
+Built with ❤️ for builders. **Rovyn** — Learn robotics by building. 🚀

@@ -264,6 +264,22 @@ NeoVerse 4D World Model Features:
   }
 
   /**
+   * Update configuration
+   */
+  updateConfig(config: Partial<NeoVerseConfig>): void {
+    this.config = { ...this.config, ...config }
+    // Also update global config for consistency
+    globalConfig = { ...globalConfig, ...config }
+  }
+
+  /**
+   * Get current configuration
+   */
+  getConfig(): NeoVerseConfig {
+    return { ...this.config }
+  }
+
+  /**
    * Reset world history
    */
   reset(): void {

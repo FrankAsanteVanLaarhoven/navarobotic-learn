@@ -1,0 +1,1059 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Slider } from '@/components/ui/slider'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  VrCard, Play, Pause, RotateCcw, Mic,
+  Camera, Users, Hand, Gamepad2,
+  Settings, ChevronRight, Share, Download,
+  Video, MessageSquare, Volume2,
+  Maximize, Minimize, LayoutGrid,
+  Monitor, Clock, Trophy, Zap, Cpu
+} from 'lucide-react'
+import Link from 'next/link'
+
+// Import all advanced systems
+import { createPhysicsEngine, PhysicsEngine } from '@/lib/physics/physics-engine'
+import { createRobotConnection, RobotConnection } from '@/lib/iot/robot-connection'
+import { HybridSolver, getRobotJoints } from '@/lib/kinematics/ik-solver'
+import { createGestureProcessor, GestureProcessor } from '@/lib/gesture-mapping/gesture-processor'
+import { useWebSocket } from '@/lib/use-websocket'
+import { MultiRobotScene } from '@/components/3d-scene/MultiRobotScene'
+import { WorkshopAnalytics } from '@/components/analytics/WorkshopAnalytics'
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+}
+
+export default function VRARWorkspace() {
+  const [mounted, setMounted] = useState(false)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [isInVR, setIsInVR] = useState(false)
+  const [connectedUsers, setConnectedUsers] = useState(3)
+  const [gestureEnabled, setGestureEnabled] = useState(true)
+  const [controllerType, setControllerType] = useState('auto')
+  const [jointStates, setJointStates] = useState({
+    baseX: 0,
+    baseY: 0,
+    baseZ: 0,
+    hipX: 0,
+    hipY: 0,
+    hipZ: 0,
+    kneeX: 0,
+    kneeY: 0,
+    kneeZ: 0,
+    ankleX: 0,
+    ankleY: 0,
+    ankleZ: 0,
+    neckX: 0,
+    neckY: 0,
+    neckZ: 0
+  })
+  const [gestureConfidence, setGestureConfidence] = useState(95)
+  const [controllerConnected, setControllerConnected] = useState(false)
+  const [latency, setLatency] = useState(15)
+  const [fps, setFps] = useState(60)
+  const viewportRef = useRef<HTMLDivElement>(null)
+
+  // WebXR session state
+  const [xrSession, setXRSession] = useState<any>(null)
+  const [xrSupported, setXRSupported] = useState(false)
+
+  // Advanced systems state
+  const [selectedRobotId, setSelectedRobotId] = useState('unitree-g1')
+  const [physicsEngine, setPhysicsEngine] = useState<PhysicsEngine | null>(null)
+  const [robotConnection, setRobotConnection] = useState<RobotConnection | null>(null)
+  const [ikSolver, setIkSolver] = useState<HybridSolver | null>(null)
+  const [gestureProcessor, setGestureProcessor] = useState<GestureProcessor | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    // Check for WebXR support
+    if ('xr' in navigator) {
+      setXRSupported(true)
+    }
+    
+    // Initialize advanced systems
+    const initSystems = async () => {
+      // Initialize physics engine
+      const physics = createPhysicsEngine({
+        gravity: -9.82,
+        friction: 0.8,
+        restitution: 0.3,
+        solverIterations: 10
+      })
+      setPhysicsEngine(physics)
+
+      // Initialize robot connection
+      const robotConn = createRobotConnection({
+        robotId: selectedRobotId,
+        type: 'unitree-g1',
+        connectionType: 'websocket',
+        host: 'localhost',
+        port: 8080
+      })
+      await robotConn.connect()
+      setRobotConnection(robotConn)
+
+      // Initialize IK solver
+      const joints = getRobotJoints('unitree-g1')
+      const solver = new HybridSolver(joints)
+      setIkSolver(solver)
+
+      // Initialize gesture processor
+      const gestureProc = createGestureProcessor()
+      await gestureProc.initialize()
+      setGestureProcessor(gestureProc)
+    }
+
+    initSystems()
+    
+    // Simulate FPS updates
+    const fpsInterval = setInterval(() => {
+      setFps(55 + Math.random() * 10)
+    }, 1000)
+    
+    return () => {
+      clearInterval(fpsInterval)
+    }
+  }, [selectedRobotId])
+
+  // Cleanup robot connection on unmount
+  useEffect(() => {
+    return () => {
+      robotConnection?.disconnect()
+    }
+  }, [robotConnection])
+
+  // Initialize WebXR session
+  const initXRSession = useCallback(async () => {
+    try {
+      if (!xrSupported) {
+        console.warn('WebXR not supported')
+        return
+      }
+
+      const session = await (navigator as any).xr?.requestSession('immersive-vr', {
+        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+      })
+
+      setXRSession(session)
+      setIsInVR(true)
+    } catch (error) {
+      console.error('Failed to init WebXR:', error)
+    }
+  }, [xrSupported])
+
+  // Update joint states (kinematics)
+  const updateJointState = useCallback((joint: string, axis: 'x' | 'y' | 'z', value: number) => {
+    setJointStates((prev: any) => {
+      // Joint parameter may already include axis (e.g., 'hipX') or we need to combine them
+      const key = prev[joint] !== undefined ? joint : `${joint}${axis.toUpperCase()}`
+      return {
+        ...prev,
+        [key]: typeof prev[key] === 'number' ? prev[key] + value : value
+      }
+    })
+  }, [])
+
+  // Handle controller input
+  const handleControllerInput = useCallback((axis: 'left' | 'right', value: number) => {
+    // Map gamepad input to joint movements
+    if (axis === 'left') {
+      updateJointState('hipX', 'x', value * 0.01)
+      updateJointState('kneeX', 'x', value * 0.01)
+      updateJointState('ankleX', 'x', value * 0.01)
+    } else if (axis === 'right') {
+      updateJointState('baseY', 'x', value * 0.01)
+      updateJointState('neckY', 'x', value * 0.01)
+    }
+  }, [updateJointState])
+
+  // Apply IK (Inverse Kinematics)
+  const applyIK = useCallback((targetPosition: { x: number; y: number; z: number }) => {
+    // Simplified IK: Update joints based on target position
+    const targetBaseY = targetPosition.y * 100
+    const targetNeckY = targetPosition.y * 50
+
+    updateJointState('baseY', 'y', targetBaseY)
+    updateJointState('neckY', 'y', targetNeckY)
+  }, [updateJointState])
+
+  // Handle gesture recognition (MediaPipe Hand Tracking)
+  const updateGesture = useCallback(async (gesture: string, confidence: number) => {
+    setGestureConfidence(confidence)
+    
+    if (gestureProcessor) {
+      // Detect gestures (mock landmarks for now)
+      const mockLandmarks = Array(21).fill([0, 0, 0])
+      const detectedGestures = await gestureProcessor.detectGestures(mockLandmarks)
+      
+      // Map gestures to actions
+      detectedGestures.forEach(gesture => {
+        const actions = gestureProcessor.mapGestureToAction(gesture)
+        actions.forEach(action => {
+          if (action.actionType === 'move' || action.actionType === 'rotate') {
+            updateJointState(action.joint, 'y', action.value)
+          }
+          
+          // Send to robot connection
+          if (robotConnection) {
+            robotConnection.setJoint(action.joint, { x: 0, y: action.value, z: 0 })
+          }
+        })
+      })
+    }
+    
+    // Legacy gesture handling
+    switch (gesture) {
+      case 'point':
+        applyIK({ x: 0, y: 0, z: 0 })
+        break
+      case 'pinch':
+        // Gripper action
+        break
+      case 'thumbs_up':
+        updateJointState('hipY', 'y', -0.1)
+        break
+      case 'wave':
+        // Wave gesture
+        break
+    }
+  }, [applyIK, updateJointState, gestureProcessor, robotConnection])
+
+  if (!mounted) return null
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/50 glass p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-2">
+              <Cpu className="w-6 h-6 text-primary" />
+              <div>
+                <h1 className="text-xl font-bold">Rovyn VR/AR Workspace</h1>
+                <p className="text-sm text-muted-foreground">Real-time kinematics, gestures & controllers</p>
+              </div>
+            </Link>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Users className="w-4 h-4" />
+              <span>{connectedUsers} Online</span>
+            </div>
+            <Badge className="bg-primary/20 text-primary border-primary/50">
+              <Monitor className="w-3 h-3 mr-1" />
+              {fps} FPS
+            </Badge>
+            <Badge className="bg-secondary/20 text-secondary border-secondary/50">
+              <Zap className="w-3 h-3 mr-1" />
+              {latency}ms
+            </Badge>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {!isInVR && (
+              <Button onClick={initXRSession} className="bg-primary hover:bg-primary/90">
+                <Play className="w-5 h-5 mr-2" />
+                Enter VR Mode
+              </Button>
+            )}
+            {isInVR && (
+              <Button onClick={() => { xrSession?.end?.(); setIsInVR(false) }} variant="outline">
+                <Pause className="w-5 h-5 mr-2" />
+                Exit VR
+              </Button>
+            )}
+            <Button variant="outline">
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden">
+        <Tabs defaultValue="overview" className="h-full" onValueChange={setActiveTab}>
+          <div className="flex h-full">
+            {/* Sidebar */}
+            <aside className="w-72 border-r border-border/50 glass flex flex-col">
+              <div className="p-4 border-b border-border/50">
+                <h2 className="text-lg font-bold mb-2">Workspace</h2>
+                <p className="text-xs text-muted-foreground">VR/AR learning environment</p>
+              </div>
+
+              <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                <Button
+                  variant={activeTab === 'overview' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('overview')}
+                >
+                  <LayoutGrid className="w-5 h-5 mr-3" />
+                  Overview
+                </Button>
+                
+                <Button
+                  variant={activeTab === 'robots' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('robots')}
+                >
+                  <Monitor className="w-5 h-5 mr-3" />
+                  Robot Models
+                </Button>
+
+                <Button
+                  variant={activeTab === 'kinematics' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('kinematics')}
+                >
+                  <Hand className="w-5 h-5 mr-3" />
+                  Gesture Control
+                </Button>
+
+                <Button
+                  variant={activeTab === 'controllers' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('controllers')}
+                >
+                  <Gamepad2 className="w-5 h-5 mr-3" />
+                  Controllers
+                </Button>
+
+                <Button
+                  variant={activeTab === 'collaboration' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('collaboration')}
+                >
+                  <Users className="w-5 h-5 mr-3" />
+                  Collaboration
+                </Button>
+
+                <Button
+                  variant={activeTab === 'instructor' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('instructor')}
+                >
+                  <Trophy className="w-5 h-5 mr-3" />
+                  Instructor Tools
+                </Button>
+              </nav>
+
+              {/* Connection Status */}
+              <div className="p-4 border-t border-border/50 space-y-3">
+                <h3 className="text-sm font-semibold mb-3">Connection</h3>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm">VR Headset</span>
+                    </div>
+                    <Badge className={isInVR ? 'bg-primary/20 text-primary border-primary/50' : 'bg-accent/20 text-accent border-accent/50'}>
+                      {isInVR ? 'Connected' : 'Not Connected'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm">Controllers</span>
+                    </div>
+                    <Badge className={controllerConnected ? 'bg-primary/20 text-primary border-primary/50' : 'bg-accent/20 text-accent border-accent/50'}>
+                      {controllerConnected ? `${controllerType}` : 'Disconnected'}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-primary" />
+                      <span className="text-sm">Gestures</span>
+                    </div>
+                    <Badge className={gestureEnabled ? 'bg-primary/20 text-primary border-primary/50' : 'bg-accent/20 text-accent border-accent/50'}>
+                      {gestureEnabled ? `${gestureConfidence.toFixed(0)}%` : 'Disabled'}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 p-6 overflow-y-auto">
+              {/* Overview Tab */}
+              <AnimatePresence>
+                {activeTab === 'overview' && (
+                  <TabsContent value="overview" className="h-full animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="h-full"
+                    >
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* 3D Viewport */}
+                        <Card className="glass border-border/50 col-span-1 lg:col-span-1">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-3">
+                              <VrCard className="w-5 h-5 text-primary" />
+                              3D Robot Workspace
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-6">
+                            <div ref={viewportRef} className="relative w-full aspect-video bg-muted/30 rounded-lg border border-border/50 overflow-hidden">
+                              {/* 3D Robot Visualization Placeholder */}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                {/* Robot Base */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-gradient-to-br from-primary to-secondary rounded-lg border-2 border-primary/50">
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <div className="text-4xl">🤖</div>
+                                  </div>
+                                  </div>
+                                  {/* Status Indicator */}
+                                  <div className="absolute -top-2 -right-2 w-3 h-3 rounded-full bg-primary" />
+                                </div>
+
+                                {/* Robot Body */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-16 w-24 h-40 bg-muted rounded-lg border-2 border-border/50">
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <div className="text-3xl">🦾</div>
+                                  </div>
+                                  </div>
+                                </div>
+
+                                {/* Robot Head */}
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-28 w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full border-2 border-primary/50 flex items-center justify-center">
+                                  <div className="text-2xl">👁</div>
+                                </div>
+
+                                {/* Arms */}
+                                <div className="absolute top-1/4 left-1/4 -translate-x-16 w-6 h-16 bg-muted rounded-lg border-2 border-border/50 -rotate-12" />
+                                <div className="absolute top-1/4 left-3/4 -translate-x-16 w-6 h-16 bg-muted rounded-lg border-2 border-border/50 rotate-12" />
+                                
+                                {/* Legs */}
+                                <div className="absolute bottom-1/4 left-1/4 -translate-x-8 w-8 h-24 bg-muted rounded-lg border-2 border-border/50" />
+                                <div className="absolute bottom-1/4 left-1/4 -translate-x-24 w-8 h-24 bg-muted rounded-lg border-2 border-border/50" />
+                              </div>
+
+                              {/* Telemetry Overlay */}
+                              <div className="absolute top-4 left-4 right-4 p-3 bg-card/90 backdrop-blur-sm rounded-lg border border-border/50">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">Position</span>
+                                    <span className="font-mono">
+                                      X: {jointStates.baseX.toFixed(2)} Y: {jointStates.baseY.toFixed(2)} Z: {jointStates.baseZ.toFixed(2)}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center justify-between text-xs">
+                                    <span className="text-muted-foreground">Status</span>
+                                    <Badge className="bg-primary/20 text-primary border-primary/50">Active</Badge>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2 mt-3">
+                                  <div className="text-xs text-muted-foreground">Joint States</div>
+                                  <div className="space-y-1">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Base X</span>
+                                      <span className="text-primary font-mono">{jointStates.baseX.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Base Y</span>
+                                      <span className="text-primary font-mono">{jointStates.baseY.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Base Z</span>
+                                      <span className="text-primary font-mono">{jointStates.baseZ.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Hip Y</span>
+                                      <span className="text-primary font-mono">{jointStates.hipY.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Knee Y</span>
+                                      <span className="text-primary font-mono">{jointStates.kneeY.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span>Neck Y</span>
+                                      <span className="text-primary font-mono">{jointStates.neckY.toFixed(2)}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Viewport Controls */}
+                            <div className="mt-4 flex items-center gap-2">
+                              <Button size="sm" variant="outline">
+                                <Maximize className="w-4 h-4" />
+                              </Button>
+                              <Button size="sm" variant="outline">
+                                <Minimize className="w-4 h-4" />
+                              </Button>
+                              <Badge className="bg-primary/20 text-primary border-primary/50">
+                                <LayoutGrid className="w-3 h-3 mr-1" />
+                                Perspective: 3D
+                              </Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Quick Stats */}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Card className="glass border-border/50">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Users className="w-8 h-8 text-primary" />
+                                  <div className="text-3xl font-bold">{connectedUsers}</div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">Connected Users</div>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="glass border-border/50">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Zap className="w-8 h-8 text-primary" />
+                                  <div className="text-3xl font-bold">{fps}</div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">Performance (FPS)</div>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="glass border-border/50">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Clock className="w-8 h-8 text-secondary" />
+                                  <div className="text-3xl font-bold">{latency}ms</div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">Latency</div>
+                              </CardContent>
+                            </Card>
+
+                            <Card className="glass border-border/50">
+                              <CardContent className="p-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <Trophy className="w-8 h-8 text-accent" />
+                                  <div className="text-3xl font-bold">{gestureConfidence.toFixed(0)}%</div>
+                                </div>
+                                <div className="text-sm text-muted-foreground">Gesture Confidence</div>
+                              </CardContent>
+                            </Card>
+                          </div>
+
+                          {/* Actions */}
+                          <Card className="glass border-border/50">
+                            <CardContent className="space-y-3 p-4">
+                              <h3 className="font-semibold mb-3">Quick Actions</h3>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Button className="w-full">
+                                  <Share className="w-5 h-5 mr-2" />
+                                  Share Workspace
+                                </Button>
+                                <Button variant="outline" className="w-full">
+                                  <Settings className="w-5 h-5 mr-2" />
+                                  Settings
+                                </Button>
+                              </div>
+                              <Button className="w-full bg-primary hover:bg-primary/90">
+                                <Video className="w-5 h-5 mr-2" />
+                                Start Recording
+                              </Button>
+                              <Button variant="outline" className="w-full">
+                                <Download className="w-5 h-5 mr-2" />
+                                Export Session
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Robots Tab */}
+                {activeTab === 'robots' && (
+                  <TabsContent value="robots" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader>
+                          <CardTitle>Available Robot Models</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                          {[
+                            { id: 1, name: 'Unitree G1', type: 'Humanoid', status: 'available', joints: 12, category: 'Mobile' },
+                            { id: 2, name: 'Boston Atlas', type: 'Bipedal', status: 'available', joints: 28, category: 'Research' },
+                            { id: 3, name: 'Tesla Optimus', type: 'Humanoid', status: 'available', joints: 12, category: 'Industrial' },
+                            { id: 4, name: 'Agility Digit', type: 'Bipedal', status: 'available', joints: 20, category: 'Logistics' }
+                          ].map((robot, idx) => (
+                            <motion.div
+                              key={robot.id}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ duration: 0.3, delay: idx * 0.1 }}
+                              className="p-4 rounded-lg bg-muted/50 hover:bg-muted border border-border/50 hover:border-primary/50 transition-all cursor-pointer"
+                            >
+                              <div className="text-3xl mb-3">🤖</div>
+                              <div className="font-semibold mb-1">{robot.name}</div>
+                              <div className="flex items-center gap-2 mb-3">
+                                <Badge variant="outline" className="text-xs">{robot.type}</Badge>
+                                <Badge className={`text-xs ${robot.status === 'available' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-accent/20 text-accent border-accent/50'}`}>
+                                  {robot.status}
+                                </Badge>
+                              </div>
+                              <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                  <span>Joints:</span>
+                                  <span className="font-semibold">{robot.joints}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span>Category:</span>
+                                  <span className="font-semibold">{robot.category}</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Kinematics Tab */}
+                {activeTab === 'kinematics' && (
+                  <TabsContent value="kinematics" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader>
+                          <CardTitle>Joint Control & Kinematics</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* IK/FK Toggle */}
+                          <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border/50">
+                            <div className="flex-1">
+                              <div className="font-semibold mb-1">Kinematics Mode</div>
+                              <div className="text-xs text-muted-foreground">Choose between IK (Inverse) and FK (Forward)</div>
+                            </div>
+                            <Badge className="bg-primary/20 text-primary border-primary/50">IK (Inverse)</Badge>
+                          </div>
+
+                          {/* Joint Controls */}
+                          <div className="space-y-4">
+                            {['base', 'hip', 'knee', 'ankle', 'neck'].map((jointName, idx) => (
+                              <div key={jointName} className="space-y-2">
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-muted border border-border/50 flex items-center justify-center">
+                                      <span className="text-sm">{idx + 1}</span>
+                                    </div>
+                                    <span className="font-medium capitalize">{jointName}</span>
+                                  </div>
+                                </div>
+
+                                {/* X-Axis Slider */}
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-muted-foreground w-12">X</span>
+                                  <Slider
+                                    value={[(jointStates as any)[`${jointName}X`] || 0]}
+                                    onValueChange={([value]) => setJointStates((prev: any) => ({ ...prev, [`${jointName}X`]: value }))}
+                                    min={-3.14}
+                                    max={3.14}
+                                    step={0.01}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm font-mono w-16 text-right">
+                                    {((jointStates as any)[`${jointName}X`] || 0).toFixed(2)}
+                                  </span>
+                                </div>
+
+                                {/* Y-Axis Slider */}
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-muted-foreground w-12">Y</span>
+                                  <Slider
+                                    value={[(jointStates as any)[`${jointName}Y`] || 0]}
+                                    onValueChange={([value]) => setJointStates((prev: any) => ({ ...prev, [`${jointName}Y`]: value }))}
+                                    min={-3.14}
+                                    max={3.14}
+                                    step={0.01}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm font-mono w-16 text-right">
+                                    {((jointStates as any)[`${jointName}Y`] || 0).toFixed(2)}
+                                  </span>
+                                </div>
+
+                                {/* Z-Axis Slider */}
+                                <div className="flex items-center gap-3">
+                                  <span className="text-sm text-muted-foreground w-12">Z</span>
+                                  <Slider
+                                    value={[(jointStates as any)[`${jointName}Z`] || 0]}
+                                    onValueChange={([value]) => setJointStates((prev: any) => ({ ...prev, [`${jointName}Z`]: value }))}
+                                    min={-3.14}
+                                    max={3.14}
+                                    step={0.01}
+                                    className="flex-1"
+                                  />
+                                  <span className="text-sm font-mono w-16 text-right">
+                                    {((jointStates as any)[`${jointName}Z`] || 0).toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Presets */}
+                          <div className="pt-4 border-t border-border/50">
+                            <div className="text-sm font-semibold mb-3">Pose Presets</div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              {[
+                                { name: 'Neutral', icon: '🧍' },
+                                { name: 'Standing', icon: '🧍' },
+                                { name: 'Walking', icon: '🧍' },
+                                { name: 'Arm Up', icon: '👋' }
+                              ].map((preset, idx) => (
+                                <Button
+                                  key={idx}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (preset.name === 'Neutral') {
+                                      setJointStates({
+                                        baseX: 0, baseY: 0, baseZ: 0,
+                                        hipX: 0, hipY: 0, hipZ: 0,
+                                        kneeX: 0, kneeY: 0, kneeZ: 0,
+                                        ankleX: 0, ankleY: 0, ankleZ: 0,
+                                        neckX: 0, neckY: 0, neckZ: 0
+                                      })
+                                    }
+                                  }}
+                                  className="w-full"
+                                >
+                                  <span className="text-xl mr-2">{preset.icon}</span>
+                                  {preset.name}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* IK Target */}
+                          <div className="pt-4 border-t border-border/50">
+                            <div className="text-sm font-semibold mb-3">Inverse Kinematics (IK) Target</div>
+                            <div className="grid grid-cols-3 gap-4 mb-3">
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Target X</div>
+                                <Slider defaultValue={[0]} min={-5} max={5} step={0.1} />
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Target Y</div>
+                                <Slider defaultValue={[0]} min={-5} max={5} step={0.1} />
+                              </div>
+                              <div>
+                                <div className="text-xs text-muted-foreground mb-2">Target Z</div>
+                                <Slider defaultValue={[0]} min={-5} max={5} step={0.1} />
+                              </div>
+                            </div>
+                            <Button className="w-full mt-4">
+                              <Mic className="w-5 h-5 mr-2" />
+                              Apply IK
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Gestures Tab */}
+                {activeTab === 'gestures' && (
+                  <TabsContent value="gestures" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader className="flex items-center justify-between">
+                          <CardTitle>Gesture Control</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <Badge className={gestureEnabled ? 'bg-primary/20 text-primary border-primary/50' : 'bg-accent/20 text-accent border-accent/50'}>
+                              {gestureEnabled ? 'Enabled' : 'Disabled'}
+                            </Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setGestureEnabled(!gestureEnabled)}
+                            >
+                              {gestureEnabled ? 'Disable' : 'Enable'}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Gesture Detection Status */}
+                          <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="w-16 h-16 rounded-lg bg-primary/20 border-primary/30 flex items-center justify-center">
+                                <Hand className="w-8 h-8 text-primary" />
+                              </div>
+                              <div>
+                                <div className="font-semibold mb-1">Hand Tracking</div>
+                                <div className="text-sm text-muted-foreground">MediaPipe Hand Recognition</div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-3xl font-bold text-primary">{gestureConfidence.toFixed(0)}%</div>
+                              <div className="text-xs text-muted-foreground">Confidence</div>
+                            </div>
+                          </div>
+
+                          {/* Available Gestures */}
+                          <div className="text-sm font-semibold mb-3">Detected Gestures</div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[
+                              { id: 1, name: 'Point', icon: '👆', enabled: true, action: 'Move hand to target' },
+                              { id: 2, name: 'Pinch', icon: '✌️', enabled: true, action: 'Gripper action' },
+                              { id: 3, name: 'Thumbs Up', icon: '👍', enabled: true, action: 'Arm up' },
+                              { id: 4, name: 'Wave', icon: '👋', enabled: true, action: 'Wave greeting' },
+                              { id: 5, name: 'Fist', icon: '✊', enabled: true, action: 'Power up' },
+                              { id: 6, name: 'Open Palm', icon: '✋', enabled: true, action: 'Release gripper' }
+                            ].map((gesture) => (
+                              <div
+                                key={gesture.id}
+                                className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                  gesture.enabled
+                                    ? 'bg-primary/10 border-primary/30 hover:bg-primary/20'
+                                    : 'bg-muted/30 border-border/50 hover:bg-muted'
+                                }`}
+                                onClick={() => { if (gesture.enabled) updateGesture(gesture.name.toLowerCase(), gestureConfidence) }}
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className="text-2xl">{gesture.icon}</span>
+                                  <div className="flex-1">
+                                    <div className="font-semibold">{gesture.name}</div>
+                                    <div className="text-xs text-muted-foreground">{gesture.action}</div>
+                                  </div>
+                                </div>
+                                {gesture.enabled && (
+                                  <div className="text-right">
+                                    <div className="w-2 h-2 rounded-full bg-primary" />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Controllers Tab */}
+                {activeTab === 'controllers' && (
+                  <TabsContent value="controllers" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader>
+                          <CardTitle>Controller Configuration</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {/* Controller Type Selection */}
+                          <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border/50">
+                            <div className="flex-1">
+                              <div className="font-semibold mb-1">Control Mode</div>
+                              <div className="text-xs text-muted-foreground">Choose how you want to control</div>
+                            </div>
+                            <Badge className="bg-primary/20 text-primary border-primary/50">
+                              {controllerType === 'auto' ? 'Auto-Detect' : controllerType}
+                            </Badge>
+                          </div>
+
+                          {/* Controller Options */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            {[
+                              { type: 'mouse-keyboard', icon: '🖱️', name: 'Mouse & Keyboard', desc: '2D fallback, always available' },
+                              { type: 'gamepad', icon: '🎮', name: 'Game Controllers', desc: 'Xbox, PlayStation, generic gamepads' },
+                              { type: 'vr', icon: '👓', name: 'VR Controllers', desc: 'Oculus, Quest, Valve Index' },
+                              { type: 'gesture', icon: '✋', name: 'Hand Gestures', desc: 'MediaPipe hand tracking' }
+                            ].map((controller) => (
+                              <div
+                                key={controller.type}
+                                onClick={() => setControllerType(controller.type)}
+                                className={`p-4 rounded-lg border transition-all cursor-pointer ${
+                                  controllerType === controller.type
+                                    ? 'bg-primary/20 border-primary'
+                                    : 'bg-muted/30 border-border/50 hover:bg-muted'
+                                }`}
+                              >
+                                <div className="text-2xl mb-2">{controller.icon}</div>
+                                <div className="font-semibold mb-1">{controller.name}</div>
+                                <div className="text-xs text-muted-foreground">{controller.desc}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Collaboration Tab */}
+                {activeTab === 'collaboration' && (
+                  <TabsContent value="collaboration" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-3">
+                            <Users className="w-5 h-5 text-primary" />
+                            Connected Users
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            {[
+                              { id: 1, name: 'Alice M.', status: 'online', role: 'Student', activity: 'Working on ROS2 basics' },
+                              { id: 2, name: 'Bob K.', status: 'online', role: 'Student', activity: 'Simulating robot movement' },
+                              { id: 3, name: 'Charlie L.', status: 'away', role: 'Instructor', activity: 'Last seen 10 min ago' },
+                              { id: 4, name: 'Diana R.', status: 'online', role: 'Student', activity: 'Viewing kinematics' }
+                            ].map((user) => (
+                              <div key={user.id} className={`p-4 rounded-lg border transition-all hover:bg-muted ${
+                                user.status === 'online'
+                                  ? 'bg-primary/10 border-primary/30'
+                                  : 'bg-muted/30 border-border/50'
+                              }`}>
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                                    <span className="text-lg font-semibold text-primary">{user.name.charAt(0)}</span>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-semibold">{user.name}</div>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">{user.role}</Badge>
+                                      <Badge className={`text-xs ${
+                                        user.status === 'online'
+                                          ? 'bg-primary/20 text-primary border-primary/50'
+                                          : 'bg-accent/20 text-accent border-accent/50'
+                                      }`}>
+                                        {user.status}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-xs text-muted-foreground">{user.activity}</div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="pt-4 border-t border-border/50">
+                            <Button className="w-full">
+                              <Share className="w-5 h-5 mr-2" />
+                              Invite Collaborators
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+
+                {/* Instructor Tab */}
+                {activeTab === 'instructor' && (
+                  <TabsContent value="instructor" className="animate-in">
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="space-y-4"
+                    >
+                      <Card className="glass border-border/50">
+                        <CardHeader>
+                          <CardTitle>Workshop Instructor Controls</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Student Overview */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
+                              <div className="text-3xl font-bold mb-2">{connectedUsers}</div>
+                              <div className="text-sm text-muted-foreground">Active Students</div>
+                            </div>
+                            <div className="p-4 rounded-lg bg-primary/10 border-primary/30">
+                              <div className="text-3xl font-bold mb-2">78%</div>
+                              <div className="text-sm text-muted-foreground">Average Completion</div>
+                            </div>
+                            <div className="p-4 rounded-lg bg-secondary/10 border-secondary/30">
+                              <div className="text-3xl font-bold mb-2">4.8</div>
+                              <div className="text-sm text-muted-foreground">Average Rating</div>
+                            </div>
+                          </div>
+
+                          {/* Workshop Controls */}
+                          <div className="pt-4 border-t border-border/50">
+                            <h3 className="text-sm font-semibold mb-3">Session Controls</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Button className="w-full">
+                                <Users className="w-5 h-5 mr-2" />
+                                Invite Students
+                              </Button>
+                              <Button className="w-full">
+                                <Video className="w-5 h-5 mr-2" />
+                                Start Session
+                              </Button>
+                              <Button variant="outline" className="w-full">
+                                <Pause className="w-5 h-5 mr-2" />
+                                Pause Session
+                              </Button>
+                              <Button variant="outline" className="w-full">
+                                <Mic className="w-5 h-5 mr-2" />
+                                Broadcast Audio
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Screen Sharing */}
+                          <div className="pt-4 border-t border-border/50">
+                            <h3 className="text-sm font-semibold mb-3">Screen Sharing & Collaboration</h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <Button className="w-full">
+                                <Share className="w-5 h-5 mr-2" />
+                                Share Screen
+                              </Button>
+                              <Button className="w-full">
+                                <MessageSquare className="w-5 h-5 mr-2" />
+                                Group Chat
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  </TabsContent>
+                )}
+              </AnimatePresence>
+            </div>
+          </Tabs>
+        </div>
+      </main>
+    </div>
+  )
+}

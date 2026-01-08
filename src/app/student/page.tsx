@@ -33,6 +33,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useState } from 'react'
+import { AnimatedLogo } from '@/components/AnimatedLogo'
 
 export default function StudentPortal() {
   const [activeTab, setActiveTab] = useState('dashboard')
@@ -63,7 +64,7 @@ export default function StudentPortal() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2">
-                <BookOpen className="h-8 w-8 text-primary" />
+                <AnimatedLogo size="md" />
                 <span className="text-lg font-bold gradient-text">STUDENT PORTAL</span>
               </Link>
             </div>

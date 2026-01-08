@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import { AnimatedLogo } from '@/components/AnimatedLogo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,10 +9,22 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Cpu, LogIn, UserPlus, Mail, Lock, MonitorPlay, GraduationCap, Shield, Users } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function AuthPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [defaultTab, setDefaultTab] = useState('login')
+  
+  // Check for tab parameter in URL
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const tab = params.get('tab')
+      if (tab === 'register') {
+        setDefaultTab('register')
+      }
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -32,8 +45,7 @@ export default function AuthPage() {
           className="flex flex-col justify-center"
         >
           <Link href="/" className="flex items-center gap-3 mb-8">
-            <Cpu className="h-10 w-10 text-primary" />
-            <span className="text-2xl font-bold gradient-text">ROBOTICS MASTERY</span>
+            <AnimatedLogo size="lg" />
           </Link>
 
           <h1 className="text-4xl font-bold mb-4">
@@ -98,7 +110,7 @@ export default function AuthPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs defaultValue={defaultTab} value={defaultTab} onValueChange={setDefaultTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Login</TabsTrigger>
                   <TabsTrigger value="register">Register</TabsTrigger>

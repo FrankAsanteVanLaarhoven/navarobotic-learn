@@ -49,12 +49,12 @@ function NeoVerseRobotModel({
   const [robotPosition, setRobotPosition] = useState(new THREE.Vector3(0, 0, 0))
   const [robotRotation, setRobotRotation] = useState(new THREE.Euler(0, 0, 0))
 
-  // Robot colors
+  // Robot colors - Professional Rovyn brand colors
   const robotColors: Record<string, { primary: string; secondary: string; accent: string }> = {
-    'unitree-g1': { primary: '#1a1a2e', secondary: '#16213e', accent: '#00d4ff' },
-    'kabuki2': { primary: '#2d2d2d', secondary: '#3d3d3d', accent: '#ff6b6b' },
-    'boston-atlas': { primary: '#2d1b1b', secondary: '#3d2525', accent: '#ff6b6b' },
-    'tesla-optimus': { primary: '#1a2e1a', secondary: '#253d25', accent: '#a3ffb3' },
+    'unitree-g1': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#2E7DFF' },
+    'kabuki2': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#00C2A8' },
+    'boston-atlas': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#2E7DFF' },
+    'tesla-optimus': { primary: '#0B0F19', secondary: '#1a1f2e', accent: '#FFD166' },
   }
 
   const colors = robotColors[selectedRobot] || robotColors['unitree-g1']
