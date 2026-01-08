@@ -165,7 +165,7 @@ export function getEmailService(): EmailService | null {
 
   const provider = (process.env.EMAIL_PROVIDER || 'resend') as 'sendgrid' | 'resend'
   const apiKey = process.env.EMAIL_API_KEY || ''
-  const fromEmail = process.env.EMAIL_FROM || 'noreply@navaroboticlearn.com'
+  const fromEmail = process.env.EMAIL_FROM || 'noreply@rovyn.io'
 
   if (!apiKey) {
     console.warn('Email service not configured')
